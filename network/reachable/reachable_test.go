@@ -28,6 +28,14 @@ func TestReachableChecker_resolve(t *testing.T) {
 			input:  "127.0.0.1:22",
 			expect: "127.0.0.1:22",
 		},
+		"happy path IPV6": {
+			input:  "1::",
+			expect: "[1::]:80",
+		},
+		"happy path IPV6:Port": {
+			input:  "[1::]:22",
+			expect: "[1::]:22",
+		},
 		"sad path empty": {
 			input:   "",
 			wantErr: true,
@@ -59,6 +67,12 @@ func TestReachableChecker_Check(t *testing.T) {
 	}{
 		"happy path URL": {
 			input: "https://example.com",
+		},
+		"happy path IPv6 for example.com": {
+			input: "2606:2800:220:1:248:1893:25c8:1946",
+		},
+		"happy path IPv6 for google dns": {
+			input: "[2001:4860:4860::8888]:53", // 8.8.8.8
 		},
 	}
 	for name, tt := range testcases {

@@ -2,11 +2,12 @@ package reachable
 
 import (
 	"errors"
-	"fmt"
 	"net"
 	"net/url"
 	"strings"
 	"time"
+
+	iurl "github.com/wuxler/goutils/network/url"
 )
 
 const (
@@ -86,59 +87,21 @@ func (r *ReachableChecker) resolve(addr string) (string, error) {
 		return "", errors.New("empty addr")
 	}
 
-	if strings.Index(addr, "://") > 0 {
-		u, err := url.Parse(addr)
-		if err != nil {
-			return "", err
-		}
-		// We must provide a port so when a port is not set in the URL provided use
-		// the default port (80)
-		port := u.Port()
-		if len(port) == 0 {
-			port = ReachableDefaultPort
-		}
-		return u.Hostname() + ":" + port, nil
-	}
-	// not find schema substr, try to parse as "domain:port" format
-	hostport := addr
-	slash := strings.Index(addr, "/")
-	if slash > 0 {
-		hostport = addr[:slash]
-	}
-	host, port := splitHostPort(hostport)
-	return fmt.Sprintf("%s:%s", host, port), nil
-}
-
-func splitHostPort(hostport string) (host, port string) {
-	host = hostport
-
-	colon := strings.LastIndexByte(host, ':')
-	if colon != -1 && validOptionalPort(host[colon:]) {
-		host, port = host[:colon], host[colon+1:]
+	if strings.Index(addr, "://") < 0 {
+		addr = "dump://" + addr
 	}
 
-	if strings.HasPrefix(host, "[") && strings.HasSuffix(host, "]") {
-		host = host[1 : len(host)-1]
+	u, err := url.Parse(addr)
+	if err != nil {
+		return "", err
 	}
-
-	return
-}
-
-// validOptionalPort reports whether port is either an empty string
-// or matches /^:\d*$/
-func validOptionalPort(port string) bool {
-	if port == "" {
-		return true
+	// We must provide a port so when a port is not set in the URL provided use
+	// the default port (80)
+	port := iurl.Port(u)
+	if len(port) == 0 {
+		port = ReachableDefaultPort
 	}
-	if port[0] != ':' {
-		return false
-	}
-	for _, b := range port[1:] {
-		if b < '0' || b > '9' {
-			return false
-		}
-	}
-	return true
+	return net.JoinHostPort(iurl.Hostname(u), port), nil
 }
 
 func Check(addr string) error {
